@@ -1,0 +1,9 @@
+# Ignore VS / .NET build folders
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.db
+*.log
+*.zip
