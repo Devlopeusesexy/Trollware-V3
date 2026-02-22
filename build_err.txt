@@ -1,0 +1,10 @@
+C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\MainWindow.xaml.cs(848,101): error CS0618: 'SKPaint.TextSize' est obsolète : 'Use SKFont.Size instead.' [C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\TrollUI.csproj]
+C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\MainWindow.xaml.cs(848,136): error CS0618: 'SKPaint.TextAlign' est obsolète : 'Use SKTextAlign method overloads instead.' [C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\TrollUI.csproj]
+C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\MainWindow.xaml.cs(988,95): error CS0121: L'appel est ambigu entre les méthodes ou propriétés suivantes : 'Math.Min(byte, byte)' et 'Math.Min(int, int)' [C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\TrollUI.csproj]
+C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\MainWindow.xaml.cs(992,97): error CS0121: L'appel est ambigu entre les méthodes ou propriétés suivantes : 'Math.Min(byte, byte)' et 'Math.Min(int, int)' [C:\Users\Kiwi\Desktop\Project 11\Trollware\TrollUI\TrollUI.csproj]
+
+ÉCHEC de la build.
+    0 Avertissement(s)
+    4 Erreur(s)
+
+Temps écoulé 00:00:02.44

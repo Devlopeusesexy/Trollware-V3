@@ -87,6 +87,7 @@ namespace TrollUI
         private MediaPlayer _mp3Duck = new MediaPlayer();
         private MediaPlayer _mp3Rizz = new MediaPlayer();
         private MediaPlayer _mp3Anime = new MediaPlayer();
+        private MediaPlayer _mp3Ah = new MediaPlayer();
         
         // WTF Effects
         private float _shakeX = 0, _shakeY = 0;
@@ -120,12 +121,14 @@ namespace TrollUI
             _mp3Duck.Open(new Uri(Path.Combine(_assetDir, "duck-toy-sound.mp3")));
             _mp3Rizz.Open(new Uri(Path.Combine(_assetDir, "rizz-sound-effect.mp3")));
             _mp3Anime.Open(new Uri(Path.Combine(_assetDir, "anime_wow.mp3"))); // Syndrome Ririmiaou
+            _mp3Ah.Open(new Uri(Path.Combine(_assetDir, "ah.wav")));
             
             _mp3Asterion.Volume = 1.0;
             _mp3Goofy.Volume = 1.0;
             _mp3Duck.Volume = 1.0;
             _mp3Rizz.Volume = 1.0;
             _mp3Anime.Volume = 1.0;
+            _mp3Ah.Volume = 1.0;
             
             // Init particules
             for (int i = 0; i < 120; i++)
@@ -330,18 +333,36 @@ namespace TrollUI
             {
                 case 1:
                     _drawAnomalies = true;
-                    PlayAudioAsync("cry.wav");
+                    if (_gameMode == "RIRI" || _gameMode == "SOFT") PlayAudioAsync("cry.wav"); // Phase 1 Douce/Mignonne
+                    else PlayAudioAsync("cry.wav");
                     break;
                 case 2:
                     _drawDistortion = true;
+                    if (_gameMode == "PUNISHER") PlayAudioAsync("kys.wav");
+                    if (_gameMode == "RIRI" || _gameMode == "SOFT")
+                    {
+                        PlayAudioAsync("kys.wav"); // Explosion Maman Blzstars -> Gore
+                        _mp3Goofy.Position = TimeSpan.Zero;
+                        _mp3Goofy.Play();
+                    }
                     break;
                 case 3:
                     _drawGlitchBoxes = true;
-                    PlayAudioAsync("kys.wav");
+                    if (_gameMode == "RIRI" || _gameMode == "SOFT")
+                    {
+                        _mp3Rizz.Position = TimeSpan.Zero;
+                        _mp3Rizz.Play();
+                    }
+                    else PlayAudioAsync("kys.wav");
                     break;
                 case 4:
                     _drawStrobe = true;
-                    PlayAudioAsync("sex.wav", loop: true);
+                    if (_gameMode == "RIRI" || _gameMode == "SOFT")
+                    {
+                        _mp3Anime.Position = TimeSpan.Zero;
+                        _mp3Anime.Play();
+                    }
+                    else PlayAudioAsync("sex.wav", loop: true);
                     
                     // --- SYNDROME RIRIMIAOU (Déclenchement Phase 4) ---
                     if (!_ririmiaouSyndromeActive)
@@ -681,6 +702,31 @@ namespace TrollUI
                     swPath.MoveTo(0, swSize); swPath.LineTo(-swSize, swSize);
                     canvas.DrawPath(swPath, pSwastika);
                 }
+                // 5. Chat Ririmiaou (Center-Bottom)
+                canvas.Save();
+                canvas.Translate(cx, cy + 200);
+                canvas.Scale(1.2f);
+                using (var pPink = new SKPaint { Color = SKColors.Pink, Style = SKPaintStyle.Fill, IsAntialias = true })
+                using (var pWhite = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Fill, IsAntialias = true })
+                using (var pBlack = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.StrokeAndFill, StrokeWidth = 3, IsAntialias = true })
+                {
+                    canvas.DrawCircle(0, 0, 80, pPink);
+                    canvas.DrawCircle(0, 0, 80, pBlack);
+                    var earPath = new SKPath();
+                    earPath.MoveTo(-70, -40); earPath.LineTo(-90, -100); earPath.LineTo(-20, -75);
+                    earPath.MoveTo(70, -40); earPath.LineTo(90, -100); earPath.LineTo(20, -75);
+                    canvas.DrawPath(earPath, pPink);
+                    canvas.DrawPath(earPath, new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeWidth = 3, IsAntialias = true });
+                    canvas.DrawCircle(-30, -10, 20, pWhite); canvas.DrawCircle(30, -10, 20, pWhite);
+                    canvas.DrawCircle(-30, -10, 8, pBlack); canvas.DrawCircle(30, -10, 8, pBlack);
+                    var whiskerPath = new SKPath();
+                    whiskerPath.MoveTo(-40, 10); whiskerPath.LineTo(-90, 0); whiskerPath.MoveTo(-40, 20); whiskerPath.LineTo(-95, 20); whiskerPath.MoveTo(-40, 30); whiskerPath.LineTo(-90, 40);
+                    whiskerPath.MoveTo(40, 10); whiskerPath.LineTo(90, 0); whiskerPath.MoveTo(40, 20); whiskerPath.LineTo(95, 20); whiskerPath.MoveTo(40, 30); whiskerPath.LineTo(90, 40);
+                    canvas.DrawPath(whiskerPath, pBlack);
+                    var mouthPath = new SKPath();
+                    mouthPath.MoveTo(-20, 25); mouthPath.QuadTo(0, 45, 0, 25); mouthPath.MoveTo(0, 25); mouthPath.QuadTo(0, 45, 20, 25);
+                    canvas.DrawPath(mouthPath, new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Stroke, StrokeWidth = 4, IsAntialias = true });
+                }
                 canvas.Restore();
 
                 canvas.Restore(); 
@@ -762,26 +808,126 @@ namespace TrollUI
 
             int currentTheme = (_frameCount / 200) % 4; // Change de thème toutes les ~3.3 secondes
 
-            // ========== THEME 0 & 1 : RIRIMIAOU & BRAWL STARS (Fade-In Smooth) ==========
+            // ========== THEME 0 & 1 : RIRIMIAOU & BRAWL STARS (Fade-In Smooth + SVG) ==========
             // Visibilité douce en sinusoïde, qui devient permanente en Phase 4
             float fadeSpeed = _currentPhase >= 4 ? 0.2f : (0.02f * _currentPhase);
             int baseAlphaImg = _currentPhase >= 4 ? 200 : (int)(Math.Sin(_frameCount * fadeSpeed) * 200);
             byte alphaImg = (byte)Math.Clamp(baseAlphaImg, 0, 255);
             
-            if (currentTheme == 0 && _imgRirimiaou != null && alphaImg > 0)
+            if (currentTheme == 0 && alphaImg > 0)
             {
                 float time = _frameCount / 15.0f;
                 float imgSize = 500 + (float)Math.Sin(time * 5) * 80;
-                float imgH = imgSize * _imgRirimiaou.Height / _imgRirimiaou.Width;
                 float imgX = (w / 2f) - (imgSize / 2f) + (float)Math.Sin(time * 12) * 200;
-                float imgY = (h / 2f) - (imgH / 2f) + (float)Math.Cos(time * 9) * 100;
+                float imgY = (h / 2f) - (imgSize / 2f) + (float)Math.Cos(time * 9) * 100;
                 
                 canvas.Save();
-                canvas.RotateDegrees((float)Math.Sin(time * 6) * 45, imgX + imgSize/2, imgY + imgH/2);
-                using (var paint = new SKPaint { Color = SKColors.White.WithAlpha(alphaImg), IsAntialias = true })
+                canvas.RotateDegrees((float)Math.Sin(time * 6) * 45, imgX + imgSize/2, imgY + imgSize/2);
+                
+                // Dessin Bitmap optionnel si présent
+                if (_imgRirimiaou != null)
                 {
-                    canvas.DrawBitmap(_imgRirimiaou, new SKRect(imgX, imgY, imgX + imgSize, imgY + imgH), paint);
+                    float imgH = imgSize * _imgRirimiaou.Height / _imgRirimiaou.Width;
+                    using (var paint = new SKPaint { Color = SKColors.White.WithAlpha(alphaImg), IsAntialias = true })
+                    {
+                        canvas.DrawBitmap(_imgRirimiaou, new SKRect(imgX, imgY, imgX + imgSize, imgY + imgH), paint);
+                    }
                 }
+
+                if (_currentPhase == 1)
+                {
+                    // DESSIN SVG MAMAN BLZSTARS (Mignonne et Rassurante)
+                    canvas.Translate(imgX + imgSize/2, imgY + imgSize/2 + 200);
+                    canvas.Scale(2.5f + (float)Math.Sin(time*2)*0.2f); // Respiration calme
+                    
+                    using (var pSkin = new SKPaint { Color = new SKColor(255, 224, 189, alphaImg), Style = SKPaintStyle.Fill, IsAntialias = true })
+                    using (var pHair = new SKPaint { Color = new SKColor(139, 69, 19, alphaImg), Style = SKPaintStyle.Fill, IsAntialias = true })
+                    using (var pEar = new SKPaint { Color = new SKColor(255, 204, 153, alphaImg), Style = SKPaintStyle.Fill, IsAntialias = true })
+                    using (var pEye = new SKPaint { Color = SKColors.Black.WithAlpha(alphaImg), Style = SKPaintStyle.Fill, IsAntialias = true })
+                    using (var pMouth = new SKPaint { Color = SKColors.IndianRed.WithAlpha(alphaImg), Style = SKPaintStyle.StrokeAndFill, StrokeWidth=2, IsAntialias = true })
+                    using (var pText = new SKPaint { Color = SKColors.DeepPink.WithAlpha(alphaImg), IsAntialias = true })
+                    using (var font = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Italic), 24))
+                    {
+                        // Cheveux derrière
+                        canvas.DrawCircle(0, -20, 85, pHair);
+                        // Visage
+                        canvas.DrawCircle(0, 0, 70, pSkin);
+                        // Cheveux devant (frange)
+                        var hairFront = new SKPath();
+                        hairFront.MoveTo(-70, 0); hairFront.QuadTo(0, -50, 70, 0); hairFront.LineTo(70, -70); hairFront.LineTo(-70, -70);
+                        canvas.DrawPath(hairFront, pHair);
+                        
+                        // Yeux doux (fermés / souriants)
+                        var eyePath = new SKPath();
+                        eyePath.MoveTo(-35, -5); eyePath.QuadTo(-25, -15, -15, -5);
+                        eyePath.MoveTo(15, -5); eyePath.QuadTo(25, -15, 35, -5);
+                        canvas.DrawPath(eyePath, new SKPaint { Color = SKColors.Black.WithAlpha(alphaImg), Style = SKPaintStyle.Stroke, StrokeWidth = 3, IsAntialias = true });
+                        
+                        // Petite bouche souriante
+                        var smilePath = new SKPath();
+                        smilePath.MoveTo(-15, 15); smilePath.QuadTo(0, 30, 15, 15);
+                        canvas.DrawPath(smilePath, new SKPaint { Color = SKColors.IndianRed.WithAlpha(alphaImg), Style = SKPaintStyle.Stroke, StrokeWidth = 3, IsAntialias = true });
+                        
+                        // Rougeurs
+                        using (var pCheek = new SKPaint { Color = SKColors.HotPink.WithAlpha((byte)(alphaImg/2)), Style = SKPaintStyle.Fill, IsAntialias=true })
+                        {
+                            canvas.DrawCircle(-35, 10, 12, pCheek);
+                            canvas.DrawCircle(35, 10, 12, pCheek);
+                        }
+
+                        // Texte
+                        string mamanText = "Blz, va manger chéri ! :3";
+                        canvas.DrawText(mamanText, 0, -100, SKTextAlign.Center, font, pText);
+                    }
+                }
+                else
+                {
+                    // DESSIN DU SVG RIRIMIAOU (Chat Mignon/Dégénéré) SUR L'ECRAN (Phase 2+)
+                    canvas.Translate(imgX + imgSize/2, imgY + imgSize/2 + 200);
+                    // Explosion si Phase 2, sinon glitch scale
+                    float distortion = _currentPhase >= 3 ? (float)Math.Tan(time * 20) * 0.5f : 0;
+                    canvas.Scale(2.0f + (float)Math.Sin(time*3)*0.5f + distortion);
+                
+                using (var pPink = new SKPaint { Color = SKColors.Pink.WithAlpha(alphaImg), Style = SKPaintStyle.Fill, IsAntialias = true })
+                using (var pWhite = new SKPaint { Color = SKColors.White.WithAlpha(alphaImg), Style = SKPaintStyle.Fill, IsAntialias = true })
+                using (var pBlack = new SKPaint { Color = SKColors.Black.WithAlpha(alphaImg), Style = SKPaintStyle.StrokeAndFill, StrokeWidth = 3, IsAntialias = true })
+                {
+                    // Tête du chat ronde
+                    canvas.DrawCircle(0, 0, 80, pPink);
+                    canvas.DrawCircle(0, 0, 80, pBlack);
+                    
+                    // Oreilles (Triangles)
+                    var earPath = new SKPath();
+                    earPath.MoveTo(-70, -40); earPath.LineTo(-90, -100); earPath.LineTo(-20, -75);
+                    earPath.MoveTo(70, -40); earPath.LineTo(90, -100); earPath.LineTo(20, -75);
+                    canvas.DrawPath(earPath, pPink);
+                    canvas.DrawPath(earPath, new SKPaint { Color = SKColors.Black.WithAlpha(alphaImg), Style = SKPaintStyle.Stroke, StrokeWidth = 3, IsAntialias = true });
+                    
+                    // Yeux (Grands animés)
+                    canvas.DrawCircle(-30, -10, 20, pWhite);
+                    canvas.DrawCircle(30, -10, 20, pWhite);
+                    canvas.DrawCircle(-30, -10, 8, pBlack); 
+                    canvas.DrawCircle(30, -10, 8, pBlack);
+                    
+                    // Moustaches (Lignes)
+                    var whiskerPath = new SKPath();
+                    whiskerPath.MoveTo(-40, 10); whiskerPath.LineTo(-90, 0);
+                    whiskerPath.MoveTo(-40, 20); whiskerPath.LineTo(-95, 20);
+                    whiskerPath.MoveTo(-40, 30); whiskerPath.LineTo(-90, 40);
+                    
+                    whiskerPath.MoveTo(40, 10); whiskerPath.LineTo(90, 0);
+                    whiskerPath.MoveTo(40, 20); whiskerPath.LineTo(95, 20);
+                    whiskerPath.MoveTo(40, 30); whiskerPath.LineTo(90, 40);
+                    canvas.DrawPath(whiskerPath, pBlack);
+                    
+                    // Bouche en "UwU" ou ":3"
+                    var mouthPath = new SKPath();
+                    mouthPath.MoveTo(-20, 25); mouthPath.QuadTo(0, 45, 0, 25);
+                    mouthPath.MoveTo(0, 25); mouthPath.QuadTo(0, 45, 20, 25);
+                    canvas.DrawPath(mouthPath, new SKPaint { Color = SKColors.Black.WithAlpha(alphaImg), Style = SKPaintStyle.Stroke, StrokeWidth = 4, IsAntialias = true });
+                }
+                } // Fin Else (Phase >= 2)
+                
                 canvas.Restore();
             }
 
@@ -839,11 +985,11 @@ namespace TrollUI
                 using (var pSkinDark = new SKPaint { Color = new SKColor((byte)(rSkin-30), (byte)(gSkin-50), (byte)(bSkin-50), alphaZizi), IsAntialias = true })
                 using (var pOutline = new SKPaint { Color = SKColors.Black.WithAlpha(alphaZizi), Style = SKPaintStyle.Stroke, StrokeWidth = 8, StrokeJoin = SKStrokeJoin.Round, IsAntialias = true })
                 using (var pHair = new SKPaint { Color = SKColors.Black.WithAlpha(alphaZizi), Style = SKPaintStyle.Stroke, StrokeWidth = 4, StrokeCap = SKStrokeCap.Round, IsAntialias = true })
-                using (var pVein = new SKPaint { Color = new SKColor(100, 50, 200, (byte)Math.Min(150, alphaZizi)), Style = SKPaintStyle.Stroke, StrokeWidth = 6, StrokeCap = SKStrokeCap.Round, IsAntialias = true })
+                using (var pVein = new SKPaint { Color = new SKColor(100, 50, 200, (byte)Math.Min(150, (int)alphaZizi)), Style = SKPaintStyle.Stroke, StrokeWidth = 6, StrokeCap = SKStrokeCap.Round, IsAntialias = true })
                 using (var pTip = new SKPaint { Color = new SKColor(255, 20, 100, alphaZizi), IsAntialias = true })
                 using (var pWhite = new SKPaint { Color = SKColors.White.WithAlpha(alphaZizi), IsAntialias = true })
                 using (var pBlack = new SKPaint { Color = SKColors.Black.WithAlpha(alphaZizi), IsAntialias = true })
-                using (var pSperm = new SKPaint { Color = new SKColor(255, 255, 255, (byte)Math.Min(200, alphaZizi)), IsAntialias = true })
+                using (var pSperm = new SKPaint { Color = new SKColor(255, 255, 255, (byte)Math.Min(200, (int)alphaZizi)), IsAntialias = true })
                 {
                     // Les bourses 
                     canvas.Save();
@@ -960,8 +1106,8 @@ namespace TrollUI
                 }
                 
                 // Sélection des textes selon le thème
-                string[] textsTheme0 = { "RIRIMIAOU", "UWAAAH", "MIAOU", "LOL", "PETIT CHAT" };
-                string[] textsTheme1 = { "BRAWL STARS", "EL PRIMO !!", "SHELLY OH OUI", "GEMMES GRATUITES" };
+                string[] textsTheme0 = { "RIRIMIAOU", "UWAAAH", "MIAOU", "LOL", "PETIT CHAT", "Dédicace à Blz mon bb ❤️", "S/o Les Queens (Modos) 👑" };
+                string[] textsTheme1 = { "BRAWL STARS", "EL PRIMO !!", "SHELLY OH OUI", "GEMMES GRATUITES", "BLZ LE BOSS", "MODOS SURPUISSANTES" };
                 string[] textsTheme2 = { "AHEGAO", "YAMETE KUDASAI", "SQUIRT", "MHHHH~", "ZIZI" };
                 string[] textsTheme3 = { "ASTERIONN", "WTF", "PUNISHER", "💀" };
                 
